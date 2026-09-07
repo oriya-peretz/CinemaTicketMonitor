@@ -77,33 +77,3 @@ def check_screenings():
 
 if __name__ == "__main__":
     check_screenings()
-    all_screenings = {}
-
-    for d in dates:
-        film_events_api = f"https://www.planetcinema.co.il/il/data-api-service/v1/quickbook/10100/film-events/in-cinema/{CINEMA_ID}/at-date/{d}?filmId={FILM_ID}&lang=he_IL"
-        try:
-            r = requests.get(film_events_api, headers=headers)
-            if r.status_code != 200:
-                continue
-            events = r.json().get("body", {}).get("events", [])
-            for ev in events:
-                dt_str = ev.get("eventDateTime", "")
-                if dt_str:
-                    date_part, time_part = dt_str.split("T")
-                    hour = time_part[:5]
-                    all_screenings.setdefault(date_part, []).append(hour)
-        except Exception:
-            continue
-
-    if all_screenings:
-        lines = ["🎬 <b>הקרנות פתוחות כרגע עבור האודיסאה:</b>\n"]
-        for d in sorted(all_screenings.keys()):
-            hours = ", ".join(sorted(set(all_screenings[d])))
-            lines.append(f"📅 <b>{d}:</b> {hours}")
-        lines.append(f"\n{PAGE_URL}")
-        send_telegram_message("\n".join(lines))
-    else:
-        send_telegram_message("לא נמצאו הקרנות פתוחות כרגע עבור הסרט.")
-
-if __name__ == "__main__":
-    check_screenings()
