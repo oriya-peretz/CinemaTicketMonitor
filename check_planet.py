@@ -6,6 +6,7 @@ BOT_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
 CINEMA_ID = "1072"
+FILM_ID = "7460s2r"
 PAGE_URL = "https://www.planetcinema.co.il/films/the-odyssey/7460s2r#/buy-tickets-by-film?in-cinema=1072&view-mode=list"
 
 def send_telegram_message(message):
@@ -24,25 +25,43 @@ def check_screenings():
     }
 
     future_date_str = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
-    api_url = f"https://www.planetcinema.co.il/il/data-api-service/v1/quickbook/10100/dates/in-cinema/{CINEMA_ID}/until/{future_date_str}?attr=&lang=he_IL"
+    dates_api = f"https://www.planetcinema.co.il/il/data-api-service/v1/quickbook/10100/dates/in-cinema/{CINEMA_ID}/until/{future_date_str}?attr=&lang=he_IL"
 
     try:
-        response = requests.get(api_url, headers=headers)
-        if response.status_code != 200:
+        res = requests.get(dates_api, headers=headers)
+        if res.status_code != 200:
             return
-        
-        data = response.json()
-        available_dates = data.get("body", {}).get("dates", [])
+        dates = res.json().get("body", {}).get("dates", [])
     except Exception:
         return
 
-    if available_dates:
-        dates_list = "\n".join([f"• {d}" for d in available_dates])
-        send_telegram_message(
-            f"🎬 <b>כל התאריכים שפתוחים כרגע בקולנוע:</b>\n\n"
-            f"{dates_list}\n\n"
-            f"לינק:\n{PAGE_URL}"
-        )
+    all_screenings = {}
+
+    for d in dates:
+        film_events_api = f"https://www.planetcinema.co.il/il/data-api-service/v1/quickbook/10100/film-events/in-cinema/{CINEMA_ID}/at-date/{d}?filmId={FILM_ID}&lang=he_IL"
+        try:
+            r = requests.get(film_events_api, headers=headers)
+            if r.status_code != 200:
+                continue
+            events = r.json().get("body", {}).get("events", [])
+            for ev in events:
+                dt_str = ev.get("eventDateTime", "")
+                if dt_str:
+                    date_part, time_part = dt_str.split("T")
+                    hour = time_part[:5]
+                    all_screenings.setdefault(date_part, []).append(hour)
+        except Exception:
+            continue
+
+    if all_screenings:
+        lines = ["🎬 <b>הקרנות פתוחות כרגע עבור האודיסאה:</b>\n"]
+        for d in sorted(all_screenings.keys()):
+            hours = ", ".join(sorted(set(all_screenings[d])))
+            lines.append(f"📅 <b>{d}:</b> {hours}")
+        lines.append(f"\n{PAGE_URL}")
+        send_telegram_message("\n".join(lines))
+    else:
+        send_telegram_message("לא נמצאו הקרנות פתוחות כרגע עבור הסרט.")
 
 if __name__ == "__main__":
     check_screenings()
