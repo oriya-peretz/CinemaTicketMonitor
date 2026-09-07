@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import json
 import os
 import requests
 
@@ -8,6 +9,7 @@ CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 CINEMA_ID = "1072"
 FILM_ID = "7460s2r"
 PAGE_URL = "https://www.planetcinema.co.il/films/the-odyssey/7460s2r#/buy-tickets-by-film?in-cinema=1072&view-mode=list"
+STATE_FILE = "screenings_state.json"
 
 def send_telegram_message(message):
     telegram_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
@@ -35,7 +37,7 @@ def check_screenings():
     except Exception:
         return
 
-    imax_screenings = {}
+    current_imax = {}
 
     for d in dates:
         film_events_api = f"https://www.planetcinema.co.il/il/data-api-service/v1/quickbook/10100/film-events/in-cinema/{CINEMA_ID}/at-date/{d}?filmId={FILM_ID}&lang=he_IL"
@@ -49,11 +51,10 @@ def check_screenings():
                 if ev_film_id != FILM_ID:
                     continue
 
-                # סינון לפי פורמט IMAX
                 attributes = ev.get("attributeIds", [])
                 types = ev.get("types", [])
                 is_imax = "imax" in [str(a).lower() for a in attributes] or "imax" in [str(t).lower() for t in types]
-                
+
                 if not is_imax:
                     continue
 
@@ -61,19 +62,35 @@ def check_screenings():
                 if dt_str:
                     date_part, time_part = dt_str.split("T")
                     hour = time_part[:5]
-                    imax_screenings.setdefault(date_part, []).append(hour)
+                    current_imax.setdefault(date_part, []).append(hour)
         except Exception:
             continue
 
-    if imax_screenings:
-        lines = ["🎬 <b>הקרנות IMAX בלבד עבור האודיסאה:</b>\n"]
-        for d in sorted(imax_screenings.keys()):
-            hours = ", ".join(sorted(set(imax_screenings[d])))
+    known_imax = {}
+    if os.path.exists(STATE_FILE):
+        try:
+            with open(STATE_FILE, "r", encoding="utf-8") as f:
+                known_imax = json.load(f)
+        except Exception:
+            known_imax = {}
+
+    new_screenings = {}
+    for d, times in current_imax.items():
+        known_times = set(known_imax.get(d, []))
+        diff = set(times) - known_times
+        if diff:
+            new_screenings[d] = sorted(list(diff))
+
+    with open(STATE_FILE, "w", encoding="utf-8") as f:
+        json.dump(current_imax, f, ensure_ascii=False, indent=2)
+
+    if new_screenings:
+        lines = ["🚨 <b>נפתחו הקרנות IMAX חדשות להאודיסאה!</b>\n"]
+        for d in sorted(new_screenings.keys()):
+            hours = ", ".join(new_screenings[d])
             lines.append(f"📅 <b>{d}:</b> {hours}")
-        lines.append(f"\n{PAGE_URL}")
+        lines.append(f"\nלינק להזמנה:\n{PAGE_URL}")
         send_telegram_message("\n".join(lines))
-    else:
-        send_telegram_message("לא נמצאו הקרנות IMAX פתוחות כרגע עבור הסרט.")
 
 if __name__ == "__main__":
     check_screenings()
