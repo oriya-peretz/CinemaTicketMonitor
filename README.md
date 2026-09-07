@@ -6,7 +6,7 @@ This repository contains a personal automated pipeline designed specifically to 
 
 The project runs via GitHub Actions on an hourly schedule, queries Planet Cinema's API directly, and sends instant Telegram notifications whenever new screening slots or dates open up.
 
-> **Note:** This project is intended strictly for personal tracking purposes and is tailored specifically to monitor IMAX screenings for this film.
+> **Note:** This project is intended strictly for personal tracking purposes and is tailored specifically to monitor IMAX screenings for this specific film.
 
 ## How It Works
 1. **GitHub Actions Scheduler:** Triggers `check_planet.py` hourly.
