@@ -20,7 +20,6 @@ def send_telegram_message(message):
     requests.post(telegram_url, json=payload)
 
 def check_screenings():
-    send_telegram_message("🔔 בדיקת מערכת: הבוט מחובר ותקין!")
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
@@ -36,11 +35,14 @@ def check_screenings():
         days_until_thursday = 7
     next_thursday = today + timedelta(days=days_until_thursday)
 
-    date_formats = [
-        next_thursday.strftime("%d/%m/%Y"),
-        next_thursday.strftime("%d/%m"),
-        next_thursday.strftime("%Y-%m-%d"),
-    ]
+date_formats = ["07/09", "07/09/2026", "2026-09-07"]
+
+    found = any(fmt in content for fmt in date_formats)
+
+    if found:
+        send_telegram_message(
+            f"✅ <b>בדיקת אימות הצליחה!</b>\nהסקריפט רואה בהצלחה את התאריכים בעמוד."
+        )
 
     found = any(fmt in content for fmt in date_formats)
 
