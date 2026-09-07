@@ -35,6 +35,48 @@ def check_screenings():
     except Exception:
         return
 
+    imax_screenings = {}
+
+    for d in dates:
+        film_events_api = f"https://www.planetcinema.co.il/il/data-api-service/v1/quickbook/10100/film-events/in-cinema/{CINEMA_ID}/at-date/{d}?filmId={FILM_ID}&lang=he_IL"
+        try:
+            r = requests.get(film_events_api, headers=headers)
+            if r.status_code != 200:
+                continue
+            events = r.json().get("body", {}).get("events", [])
+            for ev in events:
+                ev_film_id = ev.get("filmId") or ev.get("compositeFilmId")
+                if ev_film_id != FILM_ID:
+                    continue
+
+                # סינון לפי פורמט IMAX
+                attributes = ev.get("attributeIds", [])
+                types = ev.get("types", [])
+                is_imax = "imax" in [str(a).lower() for a in attributes] or "imax" in [str(t).lower() for t in types]
+                
+                if not is_imax:
+                    continue
+
+                dt_str = ev.get("eventDateTime", "")
+                if dt_str:
+                    date_part, time_part = dt_str.split("T")
+                    hour = time_part[:5]
+                    imax_screenings.setdefault(date_part, []).append(hour)
+        except Exception:
+            continue
+
+    if imax_screenings:
+        lines = ["🎬 <b>הקרנות IMAX בלבד עבור האודיסאה:</b>\n"]
+        for d in sorted(imax_screenings.keys()):
+            hours = ", ".join(sorted(set(imax_screenings[d])))
+            lines.append(f"📅 <b>{d}:</b> {hours}")
+        lines.append(f"\n{PAGE_URL}")
+        send_telegram_message("\n".join(lines))
+    else:
+        send_telegram_message("לא נמצאו הקרנות IMAX פתוחות כרגע עבור הסרט.")
+
+if __name__ == "__main__":
+    check_screenings()
     all_screenings = {}
 
     for d in dates:
