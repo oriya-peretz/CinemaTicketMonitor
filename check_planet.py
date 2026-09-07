@@ -35,22 +35,12 @@ def check_screenings():
         days_until_thursday = 7
     next_thursday = today + timedelta(days=days_until_thursday)
 
-date_formats = ["07/09", "07/09/2026", "2026-09-07"]
+    date_formats = ["07/09", "07/09/2026", "2026-09-07"]
 
     found = any(fmt in content for fmt in date_formats)
 
     if found:
-        send_telegram_message(
-            f"✅ <b>בדיקת אימות הצליחה!</b>\nהסקריפט רואה בהצלחה את התאריכים בעמוד."
-        )
-
-    found = any(fmt in content for fmt in date_formats)
-
-    if found:
-        send_telegram_message(
-            f"🚨 <b>נפתחו כרטיסים חדשים ({next_thursday.strftime('%d/%m')})!</b>\n\n"
-            f"רוצי להזמין מקומות:\n{MOVIE_URL}"
-        )
+        send_telegram_message("✅ בדיקת אימות הצליחה! הסקריפט רואה את התאריכים.")
 
 if __name__ == "__main__":
     check_screenings()
