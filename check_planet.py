@@ -23,8 +23,8 @@ def check_screenings():
         "Referer": "https://www.planetcinema.co.il/"
     }
 
-    today_str = datetime.now().strftime("%Y-%m-%d")
-    api_url = f"https://www.planetcinema.co.il/il/data-api-service/v1/quickbook/10100/dates/in-cinema/{CINEMA_ID}/until/{today_str}?attr=&lang=he_IL"
+    future_date_str = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+    api_url = f"https://www.planetcinema.co.il/il/data-api-service/v1/quickbook/10100/dates/in-cinema/{CINEMA_ID}/until/{future_date_str}?attr=&lang=he_IL"
 
     try:
         response = requests.get(api_url, headers=headers)
@@ -36,11 +36,12 @@ def check_screenings():
     except Exception:
         return
 
-    if today_str in available_dates:
+    if available_dates:
+        dates_list = "\n".join([f"• {d}" for d in available_dates])
         send_telegram_message(
-            f"✅ <b>בדיקת ה-API הצליחה!</b>\n"
-            f"הסקריפט מושך בהצלחה נתונים ישירות מהשרת של פלאנט.\n"
-            f"תאריכים שנמצאו כרגע פתוחים: {', '.join(available_dates)}"
+            f"🎬 <b>כל התאריכים שפתוחים כרגע בקולנוע:</b>\n\n"
+            f"{dates_list}\n\n"
+            f"לינק:\n{PAGE_URL}"
         )
 
 if __name__ == "__main__":
